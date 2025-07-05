@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Foods</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="#section-1" class="navbar-link">
+      <i class="fas fa-home"></i>
+      <span>Home</span>
+    </a>
+    <a href="#section-2" class="navbar-link">
+      <i class="fas fa-utensils"></i>
+      <span>Meals</span>
+    </a>
+    <a href="#section-3" class="navbar-link">
+      <i class="fas fa-hamburger"></i>
+      <span>Burger</span>
+    </a>
+    <a href="#section-3" class="navbar-link">
+      <i class="fas fa-pizza-slice"></i>
+      <span>Pizza</span>
+    </a>
+    <a href="#section-4" class="navbar-link">
+      <i class="fas fa-blender-phone"></i>
+      <span>Contact</span>
+    </a>
+  </nav>
+
+  <!-- Hamburger Icon -->
+  <div class="menu"></div>
+
+  <!-- Section 1: Home -->
+  <div class="container">
+    <div class="section-1" id="section-1">
+      <h1 class="section-heading">Variety of Foods</h1>
+      <div class="section-1-icons">
+        <i class="fas fa-egg change"></i>
+        <i class="fas fa-stroopwafel"></i>
+        <i class="fas fa-cheese"></i>
+        <i class="fas fa-hotdog"></i>
+        <i class="fas fa-drumstick-bite"></i>
+        <i class="fas fa-apple-alt"></i>
+        <i class="fas fa-fish"></i>
+        <i class="fas fa-cookie"></i>
+        <i class="fas fa-seedling"></i>
+      </div>
+    </div>
+
+    <!-- Section 2: Meals -->
+    <section class="section-2" id="section-2">
+      <h3 class="section-heading">Popular Meals</h3>
+      <div class="cards-container">
+        <div class="card">
+          <img src="images/card-img-1.png" class="card-img" />
+          <h3 class="card-name">Fish</h3>
+          <button class="card-btn">Order now</button>
+        </div>
+        <div class="card">
+          <img src="images/card-img-2.png" class="card-img" />
+          <h3 class="card-name">Cake</h3>
+          <button class="card-btn">Order now</button>
+        </div>
+        <div class="card">
+          <img src="images/card-img-3.png" class="card-img" />
+          <h3 class="card-name">Lobster</h3>
+          <button class="card-btn">Order now</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Gallery (Burger & Pizza) -->
+    <section class="section-3" id="section-3">
+      <h1 class="section-heading">Gallery</h1>
+      <div class="gallery">
+        <a href="#" class="gallery-link" title="Order Now">
+          <img src="images/gallery-img-1.jpg" class="food-img" />
+          <h3 class="food-name">Pancakes</h3>
+          <p class="food-description">Soft, fluffy round cakes made from flour, milk, and eggs, cooked on a pan. Commonly enjoyed with syrup, fruits, or butter for breakfast.</p>
+        </a>
+        <a href="#" class="gallery-link" title="Order Now">
+          <img src="images/gallery-img-2.jpg" class="food-img" />
+          <h3 class="food-name">Cupcakes</h3>
+          <p class="food-description">Miniature cakes baked in cups, topped with colorful frosting or sprinkles. Perfect for desserts, birthdays, and celebrations.</p>
+        </a>
+        <a href="#" class="gallery-link" title="Order Now">
+          <img src="images/gallery-img-3.jpg" class="food-img" />
+          <h3 class="food-name">Hummus</h3>
+          <p class="food-description">A creamy Middle Eastern dip made from chickpeas, tahini, lemon, and garlic. Served with pita or veggies, it's nutritious and vegan-friendly.</p>
+        </a>
+        <a href="#" class="gallery-link" title="Order Now">
+          <img src="images/gallery-img-4.jpg" class="food-img" />
+          <h3 class="food-name">Hamburger</h3>
+          <p class="food-description">A sandwich made with a juicy beef patty in a bun, often with lettuce, cheese, and sauces. It's a classic fast-food favorite worldwide.</p>
+        </a>
+        <a href="#" class="gallery-link" title="Order Now">
+          <img src="images/gallery-img-5.jpg" class="food-img" />
+          <h3 class="food-name">Salmon</h3>
+          <p class="food-description">A healthy, protein-rich fish often grilled, baked, or eaten raw in sushi. Known for its rich flavor and omega-3 fatty acids.</p>
+        </a>
+        <a href="#" class="gallery-link" title="Order Now">
+          <img src="images/gallery-img-6.jpg" class="food-img" />
+          <h3 class="food-name">Vegetables</h3>
+          <p class="food-description">Edible plants like carrots, broccoli, and spinach, packed with nutrients and fiber. Essential for a balanced, healthy diet.</p>
+        </a>
+      </div>
+    </section>
+
+    <!-- Section 4: Contact -->
+    <section class="section-4" id="section-4">
+      <div class="section-4-text">
+        <h2 class="section-4-heading">Sign Me Up</h2>
+        <p class="section-4-paragraph">Be the first to know about new food items</p>
+      </div>
+      <form class="signup-form">
+        <input type="email" class="signup-form-input" placeholder="Enter Your Email" />
+        <button type="submit" class="signup-form-btn">
+          <i class="fas fa-arrow-right"></i>
+        </button>
+      </form>
+      <p class="copyright">CodeAndCreate &copy; All Rights Reserved</p>
+    </section>
+  </div>
+
+ <script src="script.js"></script>
+
+</body>
+</html>
