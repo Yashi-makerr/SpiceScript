@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Menu - SpiceScript Admin</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body class="subpage-body admin-body">
+
+  <!-- Admin Passcode Lock Screen -->
+  <div class="lock-screen-overlay" id="lockScreen">
+    <div class="lock-screen-box">
+      <div class="lock-icon-box"><i class="fas fa-user-shield"></i></div>
+      <h2 class="lock-title">Admin Portal Lock</h2>
+      <p class="lock-subtitle">Please enter your restaurant security passcode to unlock this panel</p>
+      <form id="lockForm">
+        <input type="password" id="adminPasscode" placeholder="Enter Passcode (e.g. 1234)" required />
+        <button type="submit" class="lock-submit-btn">Authorize Access</button>
+      </form>
+      <p id="lockError" style="color: #e74c3c; font-size: 1.4rem; margin-top: 1.5rem; font-weight: 700; text-align: center;"></p>
+      <a href="index.html" class="lock-back-link" style="color: #a79a2d; font-size: 1.4rem; display: inline-block; margin-top: 2rem; font-weight: 700; text-decoration: none;"><i class="fas fa-arrow-left"></i> Exit to Main Website</a>
+    </div>
+  </div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="index.html#section-1" class="navbar-link">
+      <i class="fas fa-home"></i>
+      <span>Home</span>
+    </a>
+    <a href="index.html#section-2" class="navbar-link">
+      <i class="fas fa-utensils"></i>
+      <span>Meals</span>
+    </a>
+    <a href="burger.html" class="navbar-link">
+      <i class="fas fa-hamburger"></i>
+      <span>Burger</span>
+    </a>
+    <a href="pizza.html" class="navbar-link">
+      <i class="fas fa-pizza-slice"></i>
+      <span>Pizza</span>
+    </a>
+    <a href="admin.html" class="navbar-link active">
+      <i class="fas fa-tasks"></i>
+      <span>Manage</span>
+    </a>
+    <a href="index.html#section-4" class="navbar-link">
+      <i class="fas fa-blender-phone"></i>
+      <span>Contact</span>
+    </a>
+  </nav>
+
+  <!-- Hamburger Menu Icon -->
+  <div class="menu"></div>
+
+  <!-- Page Banner -->
+  <header class="subpage-banner" style="background: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('images/gallery-img-6.jpg') center/cover;">
+    <h1 class="subpage-title">Restaurant Management Portal</h1>
+    <p class="subpage-subtitle">Publish new dishes, customize categories, and manage the live database menu</p>
+  </header>
+
+  <!-- Admin Panel Sections -->
+  <section class="checkout-section admin-section" style="background-color: #111;">
+    <div class="checkout-container admin-container">
+      
+      <!-- Left Column: Add Food Item Form -->
+      <div class="checkout-column billing-payment-details">
+        <h4 class="checkout-subheading"><i class="fas fa-plus-circle"></i> Add New Menu Item</h4>
+        <form id="addMenuForm">
+          <div class="input-group">
+            <i class="fas fa-utensils input-icon"></i>
+            <input type="text" id="itemName" placeholder="Item Name (e.g. Garlic Bread)" required />
+          </div>
+          <div class="input-group">
+            <i class="fas fa-file-signature input-icon-textarea"></i>
+            <textarea id="itemDescription" placeholder="Short description of ingredients or taste..." required></textarea>
+          </div>
+          <div class="input-group">
+            <i class="fas fa-indian-rupee-sign input-icon"></i>
+            <input type="number" id="itemPrice" placeholder="Price (₹)" min="1" required />
+          </div>
+          
+          <!-- Category Selector Dropdown -->
+          <div class="input-group">
+            <i class="fas fa-folder-open input-icon" style="top: 1.6rem;"></i>
+            <select id="itemCategory" class="admin-select" required>
+              <option value="" disabled selected>Select Category</option>
+              <option value="burger">Burger</option>
+              <option value="pizza">Pizza</option>
+              <option value="drinks">Drinks / Beverages</option>
+              <option value="other">Other Meals</option>
+            </select>
+          </div>
+
+          <!-- Image Selection Method -->
+          <h4 class="checkout-subheading" style="font-size: 1.8rem; margin-top: 3rem;"><i class="fas fa-image"></i> Item Image Asset</h4>
+          <div class="payment-tabs image-tabs">
+            <div class="payment-tab active" data-method="preloaded" style="padding: 1rem;">
+              Select Preloaded
+            </div>
+            <div class="payment-tab" data-method="custom" style="padding: 1rem;">
+              Custom URL
+            </div>
+          </div>
+
+          <!-- Image Selectors Container -->
+          <div class="payment-details-container image-input-container">
+            <!-- Preloaded Images Thumbnail Grid -->
+            <div class="payment-details-content active" id="image-preloaded">
+              <p class="payment-note" style="margin-bottom: 1.5rem;"><i class="fas fa-info-circle"></i> Click to select a high-quality preloaded image:</p>
+              <div class="preloaded-thumbnails-grid">
+                <div class="thumb-card active" data-path="images/cheesy_hamburger.png">
+                  <img src="images/cheesy_hamburger.png" alt="Hamburger" />
+                  <span>Hamburger</span>
+                </div>
+                <div class="thumb-card" data-path="images/chicken_burger.png">
+                  <img src="images/chicken_burger.png" alt="Chicken Burger" />
+                  <span>Chicken Burger</span>
+                </div>
+                <div class="thumb-card" data-path="images/pepperoni_pizza.png">
+                  <img src="images/pepperoni_pizza.png" alt="Pepperoni Pizza" />
+                  <span>Pepperoni</span>
+                </div>
+                <div class="thumb-card" data-path="images/margherita_pizza.png">
+                  <img src="images/margherita_pizza.png" alt="Margherita Pizza" />
+                  <span>Margherita</span>
+                </div>
+                <div class="thumb-card" data-path="images/orange_cooler.png">
+                  <img src="images/orange_cooler.png" alt="Orange Cooler" />
+                  <span>Cooler</span>
+                </div>
+                <div class="thumb-card" data-path="images/iced_latte.png">
+                  <img src="images/iced_latte.png" alt="Iced Coffee" />
+                  <span>Iced Coffee</span>
+                </div>
+                <div class="thumb-card" data-path="images/card-img-1.png">
+                  <img src="images/card-img-1.png" alt="Fish" />
+                  <span>Fish</span>
+                </div>
+                <div class="thumb-card" data-path="images/card-img-2.png">
+                  <img src="images/card-img-2.png" alt="Cake" />
+                  <span>Cake</span>
+                </div>
+                <div class="thumb-card" data-path="images/card-img-3.png">
+                  <img src="images/card-img-3.png" alt="Lobster" />
+                  <span>Lobster</span>
+                </div>
+                <div class="thumb-card" data-path="images/gallery-img-1.jpg">
+                  <img src="images/gallery-img-1.jpg" alt="Pancakes" />
+                  <span>Pancakes</span>
+                </div>
+                <div class="thumb-card" data-path="images/gallery-img-2.jpg">
+                  <img src="images/gallery-img-2.jpg" alt="Cupcakes" />
+                  <span>Cupcakes</span>
+                </div>
+                <div class="thumb-card" data-path="images/gallery-img-3.jpg">
+                  <img src="images/gallery-img-3.jpg" alt="Hummus" />
+                  <span>Hummus</span>
+                </div>
+              </div>
+              <input type="hidden" id="selectedPreloadedImage" value="images/cheesy_hamburger.png" />
+            </div>
+
+            <!-- Custom URL Input -->
+            <div class="payment-details-content" id="image-custom">
+              <div class="input-group" style="margin-bottom: 0;">
+                <i class="fas fa-link input-icon"></i>
+                <input type="url" id="customImageUrl" placeholder="https://example.com/food-image.jpg" />
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="checkout-btn" id="submitMenuBtn" style="margin-top: 3rem;">
+            <span class="btn-text">Publish Dish to Menu</span>
+            <span class="btn-loading"><i class="fas fa-spinner fa-spin"></i> Seeding...</span>
+          </button>
+        </form>
+        <p id="formMessage" style="font-size: 1.6rem; text-align: center; margin-top: 2rem; font-weight: 700;"></p>
+      </div>
+
+      <!-- Right Column: Live Menu Management list -->
+      <div class="checkout-column cart-summary-section">
+        <h4 class="checkout-subheading"><i class="fas fa-database"></i> Live Menu items (<span id="liveMenuCount">0</span>)</h4>
+        <div class="cart-items-wrapper admin-items-wrapper" id="adminMenuList">
+          <!-- Populated dynamically from API -->
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Floating Cart Button -->
+  <div class="floating-cart-btn" id="floatingCart">
+    <i class="fas fa-shopping-basket"></i>
+    <span class="cart-count-badge" id="cartBadge">0</span>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
