@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "lint": "eslint .",
+    "test": "jest"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +21,10 @@
     "mongoose": "^9.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.11"
+    "eslint": "^10.11.0",
+    "globals": "^17.13.0",
+    "jest": "^30.5.2",
+    "nodemon": "^3.1.11",
+    "supertest": "^7.3.1"
   }
 }
