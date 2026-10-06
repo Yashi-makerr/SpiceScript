@@ -43,9 +43,11 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t food-backend:ci -f backend/Dockerfile .
+        working-directory: .
 
       - name: Create Docker image archive
         run: docker save food-backend:ci -o backend/food-backend.tar
+        working-directory: .
 
       - name: Upload Docker image artifact
         uses: actions/upload-artifact@v4
