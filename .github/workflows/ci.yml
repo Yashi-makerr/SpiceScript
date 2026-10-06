@@ -42,11 +42,10 @@ jobs:
         run: npm test
 
       - name: Build Docker image
-        run: docker build -t food-backend:ci .
-        working-directory: backend
+        run: docker build -t food-backend:ci -f backend/Dockerfile .
 
       - name: Create Docker image archive
-        run: docker save food-backend:ci -o food-backend.tar
+        run: docker save food-backend:ci -o backend/food-backend.tar
 
       - name: Upload Docker image artifact
         uses: actions/upload-artifact@v4
