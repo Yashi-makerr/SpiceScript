@@ -96,6 +96,7 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
+            -f backend/Dockerfile \
             -t ${{ steps.login-ecr.outputs.registry }}/food-backend:${{ github.sha }} \
             -t food-backend:ci .
         working-directory: .
