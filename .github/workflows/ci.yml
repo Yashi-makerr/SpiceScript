@@ -58,14 +58,14 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
+            -f backend/Dockerfile \
             -t ${{ steps.login-ecr.outputs.registry }}/food-backend:${{ github.sha }} .
         working-directory: .
-
+        
       - name: Push Docker image to ECR
         run: |
           docker push \
-            ${{ steps.login-ecr.outputs.registry }}/food-backend:${{ github.sha }} 
-        working-directory: .            
+            ${{ steps.login-ecr.outputs.registry }}/food-backend:${{ github.sha }}            
 
 # name: Backend CI
 
