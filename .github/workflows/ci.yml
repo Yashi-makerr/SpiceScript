@@ -65,7 +65,24 @@ jobs:
       - name: Push Docker image to ECR
         run: |
           docker push \
-            ${{ steps.login-ecr.outputs.registry }}/food-backend:${{ github.sha }}            
+            ${{ steps.login-ecr.outputs.registry }}/food-backend:${{ github.sha }} 
+
+      
+      - name: Test EC2 connection through SSM
+        if: github.event_name == 'push' && github.ref == 'refs/heads/ci-cd/day4-artifacts'
+        shell: bash
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "i-0d98d1dc1e5d5e6d3" \
+            --document-name "AWS-RunShellScript" \
+            --comment "SpiceScript SSM connectivity test" \
+            --parameters '{"commands":["echo SSM connection successful","hostname","sudo docker ps"]}' \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+          echo "COMMAND_ID=$COMMAND_ID" >> "$GITHUB_ENV"
+           
 
 # name: Backend CI
 
