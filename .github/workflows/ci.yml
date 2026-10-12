@@ -68,19 +68,113 @@ jobs:
             ${{ steps.login-ecr.outputs.registry }}/food-backend:${{ github.sha }} 
 
       
-      - name: Test EC2 connection through SSM
+      
+      - name: Deploy to EC2 through SSM
         if: github.event_name == 'push' && github.ref == 'refs/heads/ci-cd/day4-artifacts'
         shell: bash
+        env:
+          AWS_REGION: us-east-1
+          ECR_REGISTRY: 889629667573.dkr.ecr.us-east-1.amazonaws.com
+          ECR_REPOSITORY: food-backend
+          IMAGE_TAG: ${{ github.sha }}
         run: |
+          set -euo pipefail
+
+          # Build the remote deployment script safely.
+          REMOTE_SCRIPT=$(cat <<'SCRIPT'
+          set -eu
+
+          IMAGE_URI="889629667573.dkr.ecr.us-east-1.amazonaws.com/food-backend:IMAGE_TAG_PLACEHOLDER"
+
+          # Ensure runtime configuration exists before changing anything.
+          test -s /opt/food-backend/app.env
+
+          # Authenticate EC2 Docker to ECR using its instance role.
+          aws ecr get-login-password --region us-east-1 \
+            | sudo docker login \
+                --username AWS \
+                --password-stdin 889629667573.dkr.ecr.us-east-1.amazonaws.com
+
+          # Download the exact image built by this workflow.
+          sudo docker pull "$IMAGE_URI"
+
+          # Replace the old container.
+          sudo docker rm -f food-backend || true
+
+          sudo docker run -d \
+            --name food-backend \
+            --restart unless-stopped \
+            -p 80:5000 \
+            --env-file /opt/food-backend/app.env \
+            "$IMAGE_URI"
+
+          # Wait briefly for the application to respond.
+          for attempt in $(seq 1 12); do
+            if curl -fsS http://localhost/ >/dev/null; then
+              echo "Deployment health check passed."
+              exit 0
+            fi
+            sleep 5
+          done
+
+          echo "Deployment health check failed."
+          sudo docker logs --tail 100 food-backend || true
+          exit 1
+          SCRIPT
+          )
+
+          REMOTE_SCRIPT="${REMOTE_SCRIPT//IMAGE_TAG_PLACEHOLDER/$IMAGE_TAG}"
+
+          # Send the deployment script to the tagged EC2 instance.
+          PARAMETERS=$(jq -n --arg script "$REMOTE_SCRIPT" \
+            '{commands: [$script]}')
+
           COMMAND_ID=$(aws ssm send-command \
-            --instance-ids "i-0d98d1dc1e5d5e6d3" \
+            --region "$AWS_REGION" \
+            --targets "Key=tag:DeploymentTarget,Values=SpiceScript" \
             --document-name "AWS-RunShellScript" \
-            --comment "SpiceScript SSM connectivity test" \
-            --parameters '{"commands":["echo SSM connection successful","hostname","sudo docker ps"]}' \
+            --comment "Deploy SpiceScript image $IMAGE_TAG" \
+            --parameters "$PARAMETERS" \
             --query "Command.CommandId" \
             --output text)
 
-          echo "SSM Command ID: $COMMAND_ID"
+          echo "Deployment command: $COMMAND_ID"
+
+          # Wait for SSM to report the final result.
+          for attempt in $(seq 1 30); do
+            STATUS=$(aws ssm get-command-invocation \
+              --region "$AWS_REGION" \
+              --command-id "$COMMAND_ID" \
+              --instance-id i-0d98d1dc1e5d5e6d3 \
+              --query "Status" \
+              --output text 2>/dev/null || true)
+
+            case "$STATUS" in
+              Success)
+                aws ssm get-command-invocation \
+                  --region "$AWS_REGION" \
+                  --command-id "$COMMAND_ID" \
+                  --instance-id i-0d98d1dc1e5d5e6d3 \
+                  --query "{Status:Status,Output:StandardOutputContent}" \
+                  --output json
+                exit 0
+                ;;
+              Failed|TimedOut|Cancelled|Cancelling)
+                aws ssm get-command-invocation \
+                  --region "$AWS_REGION" \
+                  --command-id "$COMMAND_ID" \
+                  --instance-id i-0d98d1dc1e5d5e6d3 \
+                  --output json || true
+                exit 1
+                ;;
+            esac
+
+            sleep 10
+          done
+
+          echo "Timed out waiting for SSM deployment result."
+          exit 1
+
           echo "COMMAND_ID=$COMMAND_ID" >> "$GITHUB_ENV"
            
 
