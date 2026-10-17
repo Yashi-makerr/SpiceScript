@@ -1,3 +1,4 @@
+
 name: Backend CI
 
 on:
@@ -17,7 +18,6 @@ permissions:
 
 jobs:
   backend-ci:
-
     runs-on: ubuntu-latest
 
     defaults:
@@ -25,7 +25,6 @@ jobs:
         working-directory: backend
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -46,69 +45,94 @@ jobs:
         run: npm test
 
       - name: Configure AWS credentials
+        if: github.event_name == 'push' && github.ref == 'refs/heads/ci-cd/day4-artifacts'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::889629667573:role/GitHubActionsECRPushRole
           aws-region: us-east-1
 
       - name: Login to Amazon ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/ci-cd/day4-artifacts'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/ci-cd/day4-artifacts'
+        working-directory: .
+        env:
+          ECR_REGISTRY: 889629667573.dkr.ecr.us-east-1.amazonaws.com
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build \
             -f backend/Dockerfile \
-            -t ${{ steps.login-ecr.outputs.registry }}/food-backend:${{ github.sha }} .
-        working-directory: .
-        
-      - name: Push Docker image to ECR
-        run: |
-          docker push \
-            ${{ steps.login-ecr.outputs.registry }}/food-backend:${{ github.sha }} 
+            -t "$ECR_REGISTRY/food-backend:$IMAGE_TAG" .
 
-      
-      
+      - name: Push Docker image to ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/ci-cd/day4-artifacts'
+        working-directory: .
+        env:
+          ECR_REGISTRY: 889629667573.dkr.ecr.us-east-1.amazonaws.com
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker push "$ECR_REGISTRY/food-backend:$IMAGE_TAG"
+
       - name: Deploy to EC2 through SSM
         if: github.event_name == 'push' && github.ref == 'refs/heads/ci-cd/day4-artifacts'
         shell: bash
         env:
           AWS_REGION: us-east-1
           ECR_REGISTRY: 889629667573.dkr.ecr.us-east-1.amazonaws.com
-          ECR_REPOSITORY: food-backend
           IMAGE_TAG: ${{ github.sha }}
+          EC2_INSTANCE_ID: i-0d98d1dc1e5d5e6d3
+        working-directory: .
         run: |
           set -euo pipefail
 
-          # Build the remote deployment script safely.
+          # Build a remote script with the exact image tag.
           REMOTE_SCRIPT=$(cat <<'SCRIPT'
           set -eu
 
           IMAGE_URI="889629667573.dkr.ecr.us-east-1.amazonaws.com/food-backend:IMAGE_TAG_PLACEHOLDER"
+          ENV_FILE="/opt/food-backend/app.env"
+          CONTAINER_NAME="food-backend"
 
-          # Ensure runtime configuration exists before changing anything.
-          test -s /opt/food-backend/app.env
+          # Check prerequisites before changing the current deployment.
+          test -s "$ENV_FILE"
+          command -v aws >/dev/null
+          command -v docker >/dev/null
+          command -v curl >/dev/null
 
-          # Authenticate EC2 Docker to ECR using its instance role.
+          # Capture the current image for rollback.
+          PREVIOUS_IMAGE=""
+          if sudo docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
+            PREVIOUS_IMAGE=$(sudo docker inspect \
+              --format='{{.Config.Image}}' "$CONTAINER_NAME")
+          fi
+
+          # Authenticate and pull the new image before stopping the old one.
           aws ecr get-login-password --region us-east-1 \
             | sudo docker login \
                 --username AWS \
-                --password-stdin 889629667573.dkr.ecr.us-east-1.amazonaws.com
+                --password-stdin \
+                889629667573.dkr.ecr.us-east-1.amazonaws.com
 
-          # Download the exact image built by this workflow.
           sudo docker pull "$IMAGE_URI"
 
           # Replace the old container.
-          sudo docker rm -f food-backend || true
+          sudo docker rm -f "$CONTAINER_NAME" || true
 
-          sudo docker run -d \
-            --name food-backend \
+          if sudo docker run -d \
+            --name "$CONTAINER_NAME" \
             --restart unless-stopped \
             -p 80:5000 \
-            --env-file /opt/food-backend/app.env \
-            "$IMAGE_URI"
+            --env-file "$ENV_FILE" \
+            "$IMAGE_URI"; then
+            echo "New container started."
+          else
+            echo "New container failed to start."
+          fi
 
-          # Wait briefly for the application to respond.
+          # Check HTTP responsiveness for up to 60 seconds.
           for attempt in $(seq 1 12); do
             if curl -fsS http://localhost/ >/dev/null; then
               echo "Deployment health check passed."
@@ -117,35 +141,62 @@ jobs:
             sleep 5
           done
 
-          echo "Deployment health check failed."
-          sudo docker logs --tail 100 food-backend || true
+          echo "New deployment failed its health check."
+          sudo docker logs --tail 100 "$CONTAINER_NAME" || true
+
+          # Roll back to the previously deployed image.
+          if [ -n "$PREVIOUS_IMAGE" ]; then
+            echo "Rolling back to $PREVIOUS_IMAGE"
+
+            sudo docker rm -f "$CONTAINER_NAME" || true
+
+            if sudo docker run -d \
+              --name "$CONTAINER_NAME" \
+              --restart unless-stopped \
+              -p 80:5000 \
+              --env-file "$ENV_FILE" \
+              "$PREVIOUS_IMAGE"; then
+
+              for attempt in $(seq 1 12); do
+                if curl -fsS http://localhost/ >/dev/null; then
+                  echo "Rollback succeeded; new deployment failed."
+                  exit 1
+                fi
+                sleep 5
+              done
+            fi
+
+            echo "Rollback did not pass the health check."
+          else
+            echo "No previous image was recorded; rollback unavailable."
+          fi
+
           exit 1
           SCRIPT
           )
 
           REMOTE_SCRIPT="${REMOTE_SCRIPT//IMAGE_TAG_PLACEHOLDER/$IMAGE_TAG}"
 
-          # Send the deployment script to the tagged EC2 instance.
           PARAMETERS=$(jq -n --arg script "$REMOTE_SCRIPT" \
             '{commands: [$script]}')
 
           COMMAND_ID=$(aws ssm send-command \
             --region "$AWS_REGION" \
-            --targets "Key=tag:DeploymentTarget,Values=SpiceScript" \
+            --instance-ids "$EC2_INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
             --comment "Deploy SpiceScript image $IMAGE_TAG" \
             --parameters "$PARAMETERS" \
             --query "Command.CommandId" \
             --output text)
 
-          echo "Deployment command: $COMMAND_ID"
+          echo "SSM command ID: $COMMAND_ID"
 
-          # Wait for SSM to report the final result.
-          for attempt in $(seq 1 30); do
+          # Poll for the actual remote command result.
+          for attempt in $(seq 1 36); do
             STATUS=$(aws ssm get-command-invocation \
               --region "$AWS_REGION" \
               --command-id "$COMMAND_ID" \
-              --instance-id i-0d98d1dc1e5d5e6d3 \
+              --instance-id "$EC2_INSTANCE_ID" \
               --query "Status" \
               --output text 2>/dev/null || true)
 
@@ -154,8 +205,8 @@ jobs:
                 aws ssm get-command-invocation \
                   --region "$AWS_REGION" \
                   --command-id "$COMMAND_ID" \
-                  --instance-id i-0d98d1dc1e5d5e6d3 \
-                  --query "{Status:Status,Output:StandardOutputContent}" \
+                  --instance-id "$EC2_INSTANCE_ID" \
+                  --query "{Status:Status,Output:StandardOutputContent,Errors:StandardErrorContent}" \
                   --output json
                 exit 0
                 ;;
@@ -163,7 +214,7 @@ jobs:
                 aws ssm get-command-invocation \
                   --region "$AWS_REGION" \
                   --command-id "$COMMAND_ID" \
-                  --instance-id i-0d98d1dc1e5d5e6d3 \
+                  --instance-id "$EC2_INSTANCE_ID" \
                   --output json || true
                 exit 1
                 ;;
@@ -172,126 +223,5 @@ jobs:
             sleep 10
           done
 
-          echo "Timed out waiting for SSM deployment result."
+          echo "Timed out waiting for the SSM deployment result."
           exit 1
-
-          echo "COMMAND_ID=$COMMAND_ID" >> "$GITHUB_ENV"
-           
-
-# name: Backend CI
-
-# on:
-#   push:
-#     branches:
-#       - main
-#       - ci-cd/day3-ci
-#       - ci-cd/day4-artifacts
-
-#   pull_request:
-#     branches:
-#       - main
-
-# permissions:
-#   contents: read
-#   id-token: write
-
-# jobs:
-#   backend-ci:
-
-#     runs-on: ubuntu-latest
-
-#     defaults:
-#       run:
-#         working-directory: backend
-
-#     steps:
-
-#       - name: Checkout repository
-#         uses: actions/checkout@v4
-
-#       - name: Setup Node.js
-#         uses: actions/setup-node@v4
-#         with:
-#           node-version: 22
-#           cache: npm
-#           cache-dependency-path: backend/package-lock.json
-
-#       - name: Install dependencies
-#         run: npm ci
-
-#       - name: Run lint
-#         run: npm run lint
-
-#       - name: Run tests
-#         run: npm test
-
-#       - name: Debug OIDC claims
-#         run: |
-#           TOKEN=$(curl -sS \
-#             -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-#             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" \
-#             | jq -r '.value')
-
-#           export OIDC_TOKEN="$TOKEN"
-
-#           python3 - <<'PY'
-#           import os
-#           import json
-#           import base64
-
-#           token = os.environ["OIDC_TOKEN"]
-
-#           payload = token.split(".")[1]
-#           payload += "=" * (-len(payload) % 4)
-
-#           claims = json.loads(
-#               base64.urlsafe_b64decode(payload)
-#           )
-
-#           important = {
-#               "iss": claims.get("iss"),
-#               "aud": claims.get("aud"),
-#               "sub": claims.get("sub"),
-#               "repository": claims.get("repository"),
-#               "repository_owner": claims.get("repository_owner"),
-#               "ref": claims.get("ref"),
-#               "exp": claims.get("exp")
-#           }
-
-#           print(json.dumps(important, indent=2))
-#           PY
-
-#           unset OIDC_TOKEN TOKEN
-
-#       - name: Configure AWS credentials
-#         uses: aws-actions/configure-aws-credentials@v4
-#         with:
-#           role-to-assume: arn:aws:iam::889629667573:role/GitHubActionsECRPushRole
-#           aws-region: us-east-1
-
-#       - name: Login to Amazon ECR
-#         id: login-ecr
-#         uses: aws-actions/amazon-ecr-login@v2
-
-#       - name: Build Docker image
-#         run: |
-#           docker build \
-#             -f backend/Dockerfile \
-#             -t ${{ steps.login-ecr.outputs.registry }}/food-backend:${{ github.sha }} \
-#             -t food-backend:ci .
-#         working-directory: .
-
-#       - name: Push Docker image to ECR
-#         run: |
-#           docker push ${{ steps.login-ecr.outputs.registry }}/food-backend:${{ github.sha }}
-
-#       - name: Create Docker image archive
-#         run: docker save food-backend:ci -o backend/food-backend.tar
-#         working-directory: .
-
-#       - name: Upload Docker image artifact
-#         uses: actions/upload-artifact@v4
-#         with:
-#           name: food-backend-image
-
-#           path: backend/food-backend.tar
